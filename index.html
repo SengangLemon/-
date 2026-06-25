@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nonet — 9ⁿ 결정 그리드</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{ --bg:#070710; --fg:#e9e7f2; --dim:#8b88a6; --chip:#16162a; --line:#23233f; }
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Noto Sans KR",sans-serif;
+  color:var(--fg);background:
+    radial-gradient(900px 600px at 50% -5%, #1a1640, transparent 60%),
+    radial-gradient(700px 500px at 50% 110%, #101630, transparent 60%), var(--bg);
+  min-height:100%;display:flex;flex-direction:column;align-items:center;padding:26px 18px 30px;overflow:hidden;}
+
+header{width:100%;max-width:600px;display:flex;align-items:center;gap:12px;margin-bottom:18px;}
+.brand{font-family:"Fraunces",serif;font-weight:600;font-size:19px;letter-spacing:-.01em;}
+.brand b{color:#a89bff;}
+.spacer{flex:1;}
+.meta{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--dim);
+  background:var(--chip);border:1px solid var(--line);padding:6px 11px;border-radius:999px;white-space:nowrap;}
+
+.crumbs{width:100%;max-width:600px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:14px;min-height:30px;}
+.crumb{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--fg);background:var(--chip);
+  border:1px solid var(--line);border-radius:8px;padding:5px 10px;cursor:pointer;transition:.15s;line-height:1;}
+.crumb:hover{border-color:#4a4a7a;background:#1d1d38;}
+.crumb.home{color:#a89bff;}
+.crumb .sep{color:var(--dim);margin:0 2px;}
+.crumb-arrow{color:var(--dim);font-size:11px;}
+
+.viewport{width:min(86vw,600px);aspect-ratio:1;border-radius:26px;overflow:hidden;position:relative;
+  border:1px solid rgba(255,255,255,.08);box-shadow:0 30px 90px rgba(0,0,0,.55);}
+.grid{position:absolute;inset:0;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);
+  gap:13px;padding:13px;will-change:transform;}
+.grid.anim{transition:transform .62s cubic-bezier(.66,0,.2,1);}
+
+.tile{position:relative;border-radius:24px;cursor:pointer;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.45), 0 8px 20px rgba(0,0,0,.30);
+  animation:pop .5s cubic-bezier(.2,.75,.2,1) backwards;
+  transition:transform .2s cubic-bezier(.2,.7,.2,1), box-shadow .2s;}
+.tile::before{content:"";position:absolute;left:0;right:0;top:0;height:46%;
+  background:linear-gradient(180deg, rgba(255,255,255,.40), rgba(255,255,255,0));pointer-events:none;}
+.tile:hover{transform:translateY(-3px) scale(1.02);box-shadow:inset 0 1px 0 rgba(255,255,255,.55), 0 16px 34px var(--glow);}
+.tile:active{transform:scale(.98);}
+.tile .num{position:relative;z-index:2;font-family:"Fraunces",serif;font-weight:600;font-size:clamp(30px,8vw,64px);
+  color:#fff;text-shadow:0 1px 10px rgba(0,0,0,.18);}
+
+.grid:nth-child(n) .tile:nth-child(1){animation-delay:0s}
+.tile:nth-child(2){animation-delay:.03s}.tile:nth-child(3){animation-delay:.06s}
+.tile:nth-child(4){animation-delay:.05s}.tile:nth-child(5){animation-delay:.08s}.tile:nth-child(6){animation-delay:.11s}
+.tile:nth-child(7){animation-delay:.10s}.tile:nth-child(8){animation-delay:.13s}.tile:nth-child(9){animation-delay:.16s}
+@keyframes pop{from{opacity:0;transform:scale(.5)}to{opacity:1;transform:scale(1)}}
+
+.hint{margin-top:18px;font-size:12.5px;color:var(--dim);text-align:center;}
+.hint kbd{font-family:"JetBrains Mono",monospace;background:var(--chip);border:1px solid var(--line);
+  border-radius:5px;padding:1px 6px;font-size:11px;color:var(--fg);}
+</style>
+</head>
+<body>
+
+<header>
+  <span class="brand">Nonet · <b>9ⁿ</b></span>
+  <span class="spacer"></span>
+  <span class="meta" id="meta"></span>
+</header>
+
+<div class="crumbs" id="crumbs"></div>
+
+<div class="viewport">
+  <div class="grid" id="grid"></div>
+</div>
+
+<p class="hint">타일을 누르면 그 안으로 줌인하며 다시 <b>9개</b>로 갈라집니다 · <kbd>Esc</kbd> 뒤로</p>
+
+<script>
+const grid = document.getElementById('grid');
+const meta = document.getElementById('meta');
+const crumbsEl = document.getElementById('crumbs');
+let path = [];          // 선택한 인덱스(0~8) 스택
+let busy = false;
+
+function colorFor(abs){  // abs = 이 타일까지의 절대 경로
+  const i = abs[abs.length-1];
+  const depth = abs.length;
+  // 9칸을 채도·명도까지 다르게 — 깊은 색/파스텔/쨍한 색이 한 화면에 섞이도록
+  const HUE = [255, 18, 42, 168, 285, 132, 8, 205, 320];   // 보라·주황·노랑·청록·자주·초록·빨강·파랑·핑크
+  const SAT = [62, 85, 88, 55, 70, 48, 78, 90, 66];
+  const LIG = [60, 56, 64, 44, 52, 70, 48, 58, 50];
+  const rot = depth * 23;                                   // 깊이마다 팔레트가 회전
+  const h1 = (HUE[i] + rot) % 360;
+  const s1 = SAT[i], l1 = LIG[i];
+  const h2 = (h1 + 30) % 360;
+  return {
+    bg:`linear-gradient(155deg, hsl(${h1} ${Math.min(s1+8,96)}% ${l1+12}%), hsl(${h2} ${Math.min(s1+8,96)}% ${l1-6}%))`,
+    glow:`hsla(${h1} ${s1}% ${l1}% / .5)`
+  };
+}
+
+function render(){
+  grid.innerHTML = '';
+  for(let i=0;i<9;i++){
+    const abs = path.concat(i);
+    const {bg,glow} = colorFor(abs);
+    const t = document.createElement('div');
+    t.className = 'tile';
+    t.style.background = bg;
+    t.style.setProperty('--glow', glow);
+    t.innerHTML = `<span class="num">${i+1}</span>`;
+    t.addEventListener('click', ()=>zoomIn(i));
+    grid.appendChild(t);
+  }
+  updateChrome();
+}
+
+function updateChrome(){
+  const level = path.length + 1;
+  const total = Math.pow(9, level);
+  const totalStr = total <= 1e12 ? total.toLocaleString() : '9^'+level;
+  meta.textContent = `깊이 ${level} · 9^${level} = ${totalStr} 갈래`;
+
+  crumbsEl.innerHTML = '';
+  const home = document.createElement('span');
+  home.className = 'crumb home';
+  home.textContent = '◆ 처음';
+  home.addEventListener('click', ()=>zoomOut(0));
+  crumbsEl.appendChild(home);
+  path.forEach((idx,k)=>{
+    const a = document.createElement('span'); a.className='crumb-arrow'; a.textContent='›';
+    crumbsEl.appendChild(a);
+    const c = document.createElement('span');
+    c.className='crumb';
+    c.textContent = (idx+1);
+    c.addEventListener('click', ()=>zoomOut(k+1));
+    crumbsEl.appendChild(c);
+  });
+}
+
+function originOf(i){
+  const r = Math.floor(i/3), c = i%3;
+  return `${(c+0.5)/3*100}% ${(r+0.5)/3*100}%`;
+}
+
+function zoomIn(i){
+  if(busy) return; busy = true;
+  grid.style.transformOrigin = originOf(i);
+  grid.classList.add('anim');
+  requestAnimationFrame(()=>{ grid.style.transform = 'scale(3)'; });
+  grid.addEventListener('transitionend', function done(){
+    grid.removeEventListener('transitionend', done);
+    path.push(i);
+    grid.classList.remove('anim');
+    grid.style.transform = 'none';
+    render();
+    busy = false;
+  }, {once:true});
+}
+
+function zoomOut(newLen){
+  if(busy || newLen >= path.length) return; busy = true;
+  const leaving = path[newLen];          // 빠져나올 때 기준이 되는 상위 타일
+  path = path.slice(0, newLen);
+  render();
+  grid.classList.remove('anim');
+  grid.style.transformOrigin = originOf(leaving);
+  grid.style.transform = 'scale(3)';
+  requestAnimationFrame(()=>{
+    grid.classList.add('anim');
+    requestAnimationFrame(()=>{ grid.style.transform = 'none'; });
+  });
+  grid.addEventListener('transitionend', function done(){
+    grid.removeEventListener('transitionend', done);
+    grid.classList.remove('anim');
+    busy = false;
+  }, {once:true});
+}
+
+document.addEventListener('keydown', e=>{
+  if(e.key === 'Escape' && path.length) zoomOut(path.length-1);
+});
+
+render();
+</script>
+</body>
+</html>
