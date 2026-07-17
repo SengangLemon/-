@@ -3,150 +3,427 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Nonet — 9ⁿ 결정 그리드</title>
+<title>Nonet</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
-:root{ --bg:#070710; --fg:#e9e7f2; --dim:#8b88a6; --chip:#16162a; --line:#23233f; }
+:root{
+  --paper:#EDEAE1; --paper-raised:#F6F4EE; --paper-deep:#E2DCCB;
+  --ink:#211D17; --ink-soft:#79715F; --ink-faint:#A89F8A;
+  --line:#DAD3C1; --line-soft:#E5DFD0;
+  --accent:#2F5D62; --accent-soft:#DCE7E5; --accent-ink:#1D3E42;
+  --danger:#9A4A3A; --danger-soft:#F1E1DB;
+  --radius-lg:22px; --radius-md:14px; --radius-sm:9px;
+  --shadow-card:0 1px 2px rgba(33,29,23,.05), 0 12px 28px rgba(33,29,23,.08);
+  --shadow-pop:0 20px 60px rgba(33,29,23,.16), 0 4px 14px rgba(33,29,23,.10);
+}
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;}
-body{font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Noto Sans KR",sans-serif;
-  color:var(--fg);background:
-    radial-gradient(900px 600px at 50% -5%, #1a1640, transparent 60%),
-    radial-gradient(700px 500px at 50% 110%, #101630, transparent 60%), var(--bg);
-  min-height:100%;display:flex;flex-direction:column;align-items:center;padding:26px 18px 30px;overflow:hidden;}
+body{
+  font-family:'Inter','Pretendard','Noto Sans KR',-apple-system,BlinkMacSystemFont,sans-serif;
+  color:var(--ink); background:var(--paper);
+  min-height:100%; display:flex; flex-direction:column; align-items:center;
+  -webkit-font-smoothing:antialiased;
+}
+button{font-family:inherit;}
+.app{width:100%;max-width:620px;padding:22px 18px 60px;}
 
-header{width:100%;max-width:600px;display:flex;align-items:center;gap:12px;margin-bottom:18px;}
-.brand{font-family:"Fraunces",serif;font-weight:600;font-size:19px;letter-spacing:-.01em;}
-.brand b{color:#a89bff;}
+/* ---------- shared chrome ---------- */
+.topbar{display:flex;align-items:center;gap:10px;margin-bottom:22px;min-height:36px;}
+.wordmark{font-family:'Fraunces',serif;font-weight:600;font-size:19px;letter-spacing:-.01em;}
+.wordmark .exp{font-size:12px;vertical-align:super;color:var(--accent);}
+.iconbtn{
+  width:34px;height:34px;border-radius:50%;border:1px solid var(--line);
+  background:var(--paper-raised);color:var(--ink-soft);display:flex;align-items:center;justify-content:center;
+  cursor:pointer;flex-shrink:0;font-size:15px;transition:.15s;
+}
+.iconbtn:hover{border-color:var(--ink-faint);color:var(--ink);background:#fff;}
+.iconbtn svg{width:16px;height:16px;}
 .spacer{flex:1;}
-.meta{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--dim);
-  background:var(--chip);border:1px solid var(--line);padding:6px 11px;border-radius:999px;white-space:nowrap;}
+.savebadge{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink-faint);
+  display:flex;align-items:center;gap:6px;opacity:0;transition:opacity .25s;white-space:nowrap;}
+.savebadge.show{opacity:1;}
+.savebadge .dot{width:5px;height:5px;border-radius:50%;background:var(--accent);}
 
-.crumbs{width:100%;max-width:600px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:14px;min-height:30px;}
-.crumb{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--fg);background:var(--chip);
-  border:1px solid var(--line);border-radius:8px;padding:5px 10px;cursor:pointer;transition:.15s;line-height:1;}
-.crumb:hover{border-color:#4a4a7a;background:#1d1d38;}
-.crumb.home{color:#a89bff;}
-.crumb .sep{color:var(--dim);margin:0 2px;}
-.crumb-arrow{color:var(--dim);font-size:11px;}
+/* ---------- home / library ---------- */
+.homehead{margin-bottom:24px;}
+.homehead h1{font-family:'Fraunces',serif;font-weight:600;font-size:26px;letter-spacing:-.01em;margin-bottom:6px;}
+.homehead p{font-size:13.5px;color:var(--ink-soft);line-height:1.55;max-width:46ch;}
 
-.viewport{width:min(86vw,600px);aspect-ratio:1;border-radius:26px;overflow:hidden;position:relative;
-  border:1px solid rgba(255,255,255,.08);box-shadow:0 30px 90px rgba(0,0,0,.55);}
+.boardgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;}
+.boardcard{
+  background:var(--paper-raised); border:1px solid var(--line); border-radius:var(--radius-md);
+  padding:16px 16px 14px; cursor:pointer; position:relative; transition:.15s; box-shadow:var(--shadow-card);
+}
+.boardcard:hover{border-color:var(--ink-faint); transform:translateY(-2px);}
+.swatchrow{display:flex;gap:4px;margin-bottom:14px;}
+.swatch{flex:1;height:8px;border-radius:3px;background:var(--paper-deep);}
+.boardcard h3{font-family:'Fraunces',serif;font-weight:600;font-size:16.5px;line-height:1.3;margin-bottom:5px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.boardcard .meta{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink-faint);}
+.boardcard .del{
+  position:absolute; top:10px; right:10px; width:24px;height:24px;border-radius:50%;
+  border:none;background:transparent;color:var(--ink-faint);display:flex;align-items:center;justify-content:center;
+  font-size:13px;cursor:pointer;opacity:0;transition:.15s;
+}
+.boardcard:hover .del{opacity:1;}
+.boardcard .del:hover{background:var(--danger-soft);color:var(--danger);}
+
+.newcard{
+  border:1.5px dashed var(--ink-faint); border-radius:var(--radius-md); background:transparent;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
+  min-height:112px; cursor:pointer; color:var(--ink-soft); transition:.15s;
+}
+.newcard:hover{border-color:var(--accent); color:var(--accent-ink); background:var(--accent-soft);}
+.newcard .plus{font-size:22px;font-weight:400;line-height:1;}
+.newcard span.label{font-size:12.5px;font-weight:500;}
+
+.empty{text-align:center;padding:60px 20px;color:var(--ink-soft);}
+.empty p{font-size:13.5px;margin-top:6px;}
+
+/* ---------- board view ---------- */
+.boardhead{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
+.titlefield{
+  font-family:'Fraunces',serif;font-weight:600;font-size:19px;background:transparent;border:none;
+  color:var(--ink);flex:1;min-width:0;padding:4px 2px;border-radius:6px;
+}
+.titlefield:hover{background:var(--paper-raised);}
+.titlefield:focus{outline:none;background:#fff;box-shadow:0 0 0 1px var(--line);}
+
+.crumbs{display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-bottom:18px;min-height:26px;}
+.crumb{
+  font-family:'JetBrains Mono',monospace; font-size:11.5px; color:var(--ink-soft);
+  background:var(--paper-raised); border:1px solid var(--line); border-radius:7px;
+  padding:4px 9px; cursor:pointer; line-height:1; transition:.15s;
+}
+.crumb:hover{border-color:var(--ink-faint); color:var(--ink);}
+.crumb.home{color:var(--accent-ink); border-color:var(--accent-soft); background:var(--accent-soft);}
+.crumb-arrow{color:var(--ink-faint); font-size:10px;}
+
+.viewport{
+  width:100%; aspect-ratio:1; border-radius:var(--radius-lg); overflow:hidden; position:relative;
+  border:1px solid var(--line); box-shadow:var(--shadow-card); background:var(--paper-deep);
+}
 .grid{position:absolute;inset:0;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);
-  gap:13px;padding:13px;will-change:transform;}
-.grid.anim{transition:transform .62s cubic-bezier(.66,0,.2,1);}
+  gap:8px;padding:8px;will-change:transform;}
+.grid.anim{transition:transform .5s cubic-bezier(.65,0,.2,1);}
 
-.tile{position:relative;border-radius:24px;cursor:pointer;overflow:hidden;
-  display:flex;align-items:center;justify-content:center;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.45), 0 8px 20px rgba(0,0,0,.30);
-  animation:pop .5s cubic-bezier(.2,.75,.2,1) backwards;
-  transition:transform .2s cubic-bezier(.2,.7,.2,1), box-shadow .2s;}
-.tile::before{content:"";position:absolute;left:0;right:0;top:0;height:46%;
-  background:linear-gradient(180deg, rgba(255,255,255,.40), rgba(255,255,255,0));pointer-events:none;}
-.tile:hover{transform:translateY(-3px) scale(1.02);box-shadow:inset 0 1px 0 rgba(255,255,255,.55), 0 16px 34px var(--glow);}
+.tile{
+  position:relative; border-radius:14px; cursor:pointer; overflow:hidden; background:var(--paper-raised);
+  display:flex; align-items:center; justify-content:center; padding:10px;
+  border:1px solid var(--line-soft);
+  transition:transform .15s cubic-bezier(.2,.7,.2,1), box-shadow .15s, border-color .15s;
+  animation:pop .38s cubic-bezier(.2,.75,.2,1) backwards;
+}
+.tile.filled{border-color:transparent;}
+.tile:hover{transform:translateY(-2px); box-shadow:0 8px 18px rgba(33,29,23,.14);}
 .tile:active{transform:scale(.98);}
-.tile .num{position:relative;z-index:2;font-family:"Fraunces",serif;font-weight:600;font-size:clamp(30px,8vw,64px);
-  color:#fff;text-shadow:0 1px 10px rgba(0,0,0,.18);}
+.tile:nth-child(1){animation-delay:0s}.tile:nth-child(2){animation-delay:.02s}.tile:nth-child(3){animation-delay:.04s}
+.tile:nth-child(4){animation-delay:.03s}.tile:nth-child(5){animation-delay:.06s}.tile:nth-child(6){animation-delay:.08s}
+.tile:nth-child(7){animation-delay:.07s}.tile:nth-child(8){animation-delay:.10s}.tile:nth-child(9){animation-delay:.12s}
+@keyframes pop{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:scale(1)}}
 
-.grid:nth-child(n) .tile:nth-child(1){animation-delay:0s}
-.tile:nth-child(2){animation-delay:.03s}.tile:nth-child(3){animation-delay:.06s}
-.tile:nth-child(4){animation-delay:.05s}.tile:nth-child(5){animation-delay:.08s}.tile:nth-child(6){animation-delay:.11s}
-.tile:nth-child(7){animation-delay:.10s}.tile:nth-child(8){animation-delay:.13s}.tile:nth-child(9){animation-delay:.16s}
-@keyframes pop{from{opacity:0;transform:scale(.5)}to{opacity:1;transform:scale(1)}}
+.tile .code{
+  position:absolute; top:7px; left:9px; font-family:'JetBrains Mono',monospace; font-size:10px;
+  letter-spacing:.02em; color:var(--ink-faint); z-index:2;
+}
+.tile.filled .code{color:rgba(255,255,255,.72);}
+.tile .label{
+  position:relative; z-index:2; font-family:'Fraunces',serif; font-weight:500;
+  font-size:clamp(12px,3.6vw,15.5px); line-height:1.32; text-align:center; color:var(--ink);
+  display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden;
+  word-break:keep-all;
+}
+.tile.filled .label{color:#fff;}
+.tile.empty .label{color:var(--ink-faint); font-family:'Inter',sans-serif; font-size:12px; font-weight:500;}
+.tile .dot{position:absolute; bottom:8px; right:9px; width:5px;height:5px;border-radius:50%;
+  background:var(--accent); z-index:2;}
+.tile.filled .dot{background:rgba(255,255,255,.75);}
 
-.hint{margin-top:18px;font-size:12.5px;color:var(--dim);text-align:center;}
-.hint kbd{font-family:"JetBrains Mono",monospace;background:var(--chip);border:1px solid var(--line);
-  border-radius:5px;padding:1px 6px;font-size:11px;color:var(--fg);}
+.tile .edit{
+  position:absolute; top:5px; right:5px; width:24px;height:24px;border-radius:50%;
+  border:none; background:rgba(255,255,255,.55); color:var(--ink-soft);
+  display:flex;align-items:center;justify-content:center; font-size:12px; cursor:pointer; z-index:3;
+  opacity:0; transition:.15s;
+}
+.tile:hover .edit, .tile:focus-within .edit{opacity:1;}
+.tile.filled .edit{background:rgba(0,0,0,.22); color:rgba(255,255,255,.9);}
+.tile .edit:hover{background:#fff; color:var(--ink);}
+
+.tile textarea{
+  position:relative; z-index:4; width:100%; background:transparent; border:none; outline:none; resize:none;
+  font-family:'Inter',sans-serif; font-size:13px; font-weight:500; text-align:center; color:var(--ink);
+  line-height:1.4; max-height:100%;
+}
+.tile.filled textarea{color:#fff;}
+.tile textarea::placeholder{color:var(--ink-faint);}
+.tile.filled textarea::placeholder{color:rgba(255,255,255,.65);}
+
+.hint{margin-top:16px; font-size:12px; color:var(--ink-faint); text-align:center;}
+.hint kbd{font-family:'JetBrains Mono',monospace; background:var(--paper-raised); border:1px solid var(--line);
+  border-radius:5px; padding:1px 6px; font-size:10.5px; color:var(--ink-soft);}
+
+@media (max-width:420px){ .boardgrid{grid-template-columns:repeat(2,1fr);} }
 </style>
 </head>
 <body>
-
-<header>
-  <span class="brand">Nonet · <b>9ⁿ</b></span>
-  <span class="spacer"></span>
-  <span class="meta" id="meta"></span>
-</header>
-
-<div class="crumbs" id="crumbs"></div>
-
-<div class="viewport">
-  <div class="grid" id="grid"></div>
-</div>
-
-<p class="hint">타일을 누르면 그 안으로 줌인하며 다시 <b>9개</b>로 갈라집니다 · <kbd>Esc</kbd> 뒤로</p>
+<div class="app" id="app"></div>
 
 <script>
-const grid = document.getElementById('grid');
-const meta = document.getElementById('meta');
-const crumbsEl = document.getElementById('crumbs');
-let path = [];          // 선택한 인덱스(0~8) 스택
+const app = document.getElementById('app');
+
+/* ---------------- storage helpers ---------------- */
+async function getIndex(){
+  try{ const r = await window.storage.get('boards-index', false); return r ? JSON.parse(r.value) : []; }
+  catch(e){ return []; }
+}
+async function setIndex(list){
+  try{ await window.storage.set('boards-index', JSON.stringify(list), false); }catch(e){}
+}
+async function getBoard(id){
+  try{ const r = await window.storage.get('board:'+id, false); return r ? JSON.parse(r.value) : null; }
+  catch(e){ return null; }
+}
+async function setBoard(id, board){
+  try{ await window.storage.set('board:'+id, JSON.stringify(board), false); return true; }
+  catch(e){ return false; }
+}
+async function deleteBoard(id){
+  try{ await window.storage.delete('board:'+id, false); }catch(e){}
+}
+
+/* ---------------- palette ---------------- */
+const PALETTE = [
+  {h:210,s:30,l:50},{h:18,s:48,l:54},{h:100,s:20,l:44},{h:42,s:55,l:54},
+  {h:280,s:22,l:48},{h:225,s:16,l:44},{h:8,s:42,l:48},{h:150,s:24,l:38},{h:35,s:38,l:60}
+];
+function tileBg(i, depth){
+  const p = PALETTE[i];
+  const h1 = (p.h + depth*4) % 360, h2 = (h1+16)%360;
+  const l = Math.max(30, p.l - depth*1.5);
+  return `linear-gradient(155deg, hsl(${h1} ${p.s}% ${l+6}%), hsl(${h2} ${p.s}% ${l-5}%))`;
+}
+function codeOf(i){ const cols=['A','B','C']; return cols[i%3] + (Math.floor(i/3)+1); }
+function timeAgo(ts){
+  const d = Math.floor((Date.now()-ts)/1000);
+  if(d<60) return '방금';
+  if(d<3600) return Math.floor(d/60)+'분 전';
+  if(d<86400) return Math.floor(d/3600)+'시간 전';
+  if(d<604800) return Math.floor(d/86400)+'일 전';
+  return new Date(ts).toLocaleDateString('ko-KR',{month:'short',day:'numeric'});
+}
+function uid(){ return 'b'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function escHtml(s){ return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ---------------- app state ---------------- */
+let view = 'loading';   // 'home' | 'board'
+let boardsIndex = [];
+let current = null;     // {id, title, nodes:{}, updatedAt}
+let path = [];
 let busy = false;
+let saveTimer = null;
 
-function colorFor(abs){  // abs = 이 타일까지의 절대 경로
-  const i = abs[abs.length-1];
-  const depth = abs.length;
-  // 9칸을 채도·명도까지 다르게 — 깊은 색/파스텔/쨍한 색이 한 화면에 섞이도록
-  const HUE = [255, 18, 42, 168, 285, 132, 8, 205, 320];   // 보라·주황·노랑·청록·자주·초록·빨강·파랑·핑크
-  const SAT = [62, 85, 88, 55, 70, 48, 78, 90, 66];
-  const LIG = [60, 56, 64, 44, 52, 70, 48, 58, 50];
-  const rot = depth * 23;                                   // 깊이마다 팔레트가 회전
-  const h1 = (HUE[i] + rot) % 360;
-  const s1 = SAT[i], l1 = LIG[i];
-  const h2 = (h1 + 30) % 360;
-  return {
-    bg:`linear-gradient(155deg, hsl(${h1} ${Math.min(s1+8,96)}% ${l1+12}%), hsl(${h2} ${Math.min(s1+8,96)}% ${l1-6}%))`,
-    glow:`hsla(${h1} ${s1}% ${l1}% / .5)`
-  };
+async function init(){
+  boardsIndex = await getIndex();
+  view = 'home';
+  renderHome();
 }
 
-function render(){
-  grid.innerHTML = '';
-  for(let i=0;i<9;i++){
-    const abs = path.concat(i);
-    const {bg,glow} = colorFor(abs);
-    const t = document.createElement('div');
-    t.className = 'tile';
-    t.style.background = bg;
-    t.style.setProperty('--glow', glow);
-    t.innerHTML = `<span class="num">${i+1}</span>`;
-    t.addEventListener('click', ()=>zoomIn(i));
-    grid.appendChild(t);
+/* ---------------- HOME ---------------- */
+function renderHome(){
+  boardsIndex.sort((a,b)=>b.updatedAt-a.updatedAt);
+  const cards = boardsIndex.map(b=>{
+    const sw = (b.swatch||[]).slice(0,3);
+    while(sw.length<3) sw.push(null);
+    return `
+    <div class="boardcard" data-id="${b.id}">
+      <button class="del" data-del="${b.id}" aria-label="삭제" title="삭제">✕</button>
+      <div class="swatchrow">${sw.map(c=>`<div class="swatch" style="${c?`background:${c}`:''}"></div>`).join('')}</div>
+      <h3>${escHtml(b.title||'제목 없는 보드')}</h3>
+      <div class="meta">${timeAgo(b.updatedAt)}</div>
+    </div>`;
+  }).join('');
+
+  app.innerHTML = `
+    <div class="topbar">
+      <span class="wordmark">Nonet<span class="exp">9ⁿ</span></span>
+    </div>
+    <div class="homehead">
+      <h1>결정 보드</h1>
+      <p>메뉴, 여행지, 개념 정리 등 무엇이든 3×3 칸으로 쪼개고, 각 칸을 다시 9갈래로 파고들며 정리하세요. 이름을 붙인 칸은 색이 채워지고, 비워둔 칸은 종이 그대로 남습니다.</p>
+    </div>
+    ${boardsIndex.length===0 ? `
+      <div class="boardgrid">
+        <div class="newcard" id="newBoard"><span class="plus">＋</span><span class="label">새 보드 만들기</span></div>
+      </div>
+    ` : `
+      <div class="boardgrid">
+        ${cards}
+        <div class="newcard" id="newBoard"><span class="plus">＋</span><span class="label">새 보드</span></div>
+      </div>
+    `}
+  `;
+
+  document.getElementById('newBoard').addEventListener('click', createBoard);
+  app.querySelectorAll('.boardcard').forEach(card=>{
+    card.addEventListener('click', (e)=>{
+      if(e.target.closest('[data-del]')) return;
+      openBoard(card.dataset.id);
+    });
+  });
+  app.querySelectorAll('[data-del]').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      removeBoard(btn.dataset.del);
+    });
+  });
+}
+
+async function createBoard(){
+  const id = uid();
+  const board = { id, title:'제목 없는 보드', nodes:{}, updatedAt:Date.now(), createdAt:Date.now() };
+  await setBoard(id, board);
+  boardsIndex.push({ id, title:board.title, updatedAt:board.updatedAt, swatch:[] });
+  await setIndex(boardsIndex);
+  openBoard(id, true);
+}
+
+async function removeBoard(id){
+  if(!confirm('이 보드를 삭제할까요? 되돌릴 수 없습니다.')) return;
+  await deleteBoard(id);
+  boardsIndex = boardsIndex.filter(b=>b.id!==id);
+  await setIndex(boardsIndex);
+  renderHome();
+}
+
+async function openBoard(id, focusTitle){
+  current = await getBoard(id);
+  if(!current){ renderHome(); return; }
+  path = [];
+  view = 'board';
+  renderBoard();
+  if(focusTitle){
+    const t = document.getElementById('titleField');
+    if(t){ t.focus(); t.select(); }
   }
-  updateChrome();
 }
 
-function updateChrome(){
-  const level = path.length + 1;
-  const total = Math.pow(9, level);
-  const totalStr = total <= 1e12 ? total.toLocaleString() : '9^'+level;
-  meta.textContent = `깊이 ${level} · 9^${level} = ${totalStr} 갈래`;
+/* ---------------- BOARD ---------------- */
+function nodeKey(p){ return p.join(','); }
+function getNode(p){ return current.nodes[nodeKey(p)] || null; }
+function hasDescendants(p){
+  const prefix = nodeKey(p) + ',';
+  return Object.keys(current.nodes).some(k => k.startsWith(prefix) && current.nodes[k] && current.nodes[k].label);
+}
 
-  crumbsEl.innerHTML = '';
+function renderBoard(){
+  const level = path.length;
+  app.innerHTML = `
+    <div class="topbar">
+      <button class="iconbtn" id="toHome" aria-label="보드 목록" title="보드 목록">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/></svg>
+      </button>
+      <input class="titlefield" id="titleField" value="${escHtml(current.title)}" placeholder="보드 제목" />
+      <span class="spacer"></span>
+      <span class="savebadge" id="saveBadge"><span class="dot"></span>저장됨</span>
+      <button class="iconbtn" id="delBoard" aria-label="보드 삭제" title="보드 삭제">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/></svg>
+      </button>
+    </div>
+    <div class="crumbs" id="crumbs"></div>
+    <div class="viewport"><div class="grid" id="grid"></div></div>
+    <p class="hint">칸을 누르면 그 안으로 들어가 다시 9칸으로 갈라집니다 · 연필 아이콘으로 이름 입력 · <kbd>Esc</kbd> 뒤로</p>
+  `;
+  document.getElementById('toHome').addEventListener('click', ()=>{ view='home'; renderHome(); });
+  document.getElementById('delBoard').addEventListener('click', ()=>removeBoard(current.id));
+  const tf = document.getElementById('titleField');
+  tf.addEventListener('input', ()=>{ current.title = tf.value; queueSave(); });
+  tf.addEventListener('keydown', e=>{ if(e.key==='Enter') tf.blur(); });
+
+  renderCrumbs();
+  renderGrid();
+}
+
+function renderCrumbs(){
+  const el = document.getElementById('crumbs');
+  el.innerHTML = '';
   const home = document.createElement('span');
   home.className = 'crumb home';
   home.textContent = '◆ 처음';
   home.addEventListener('click', ()=>zoomOut(0));
-  crumbsEl.appendChild(home);
+  el.appendChild(home);
   path.forEach((idx,k)=>{
     const a = document.createElement('span'); a.className='crumb-arrow'; a.textContent='›';
-    crumbsEl.appendChild(a);
+    el.appendChild(a);
+    const label = (getNode(path.slice(0,k+1))||{}).label;
     const c = document.createElement('span');
     c.className='crumb';
-    c.textContent = (idx+1);
+    c.textContent = label ? (label.length>10?label.slice(0,10)+'…':label) : codeOf(idx);
     c.addEventListener('click', ()=>zoomOut(k+1));
-    crumbsEl.appendChild(c);
+    el.appendChild(c);
   });
 }
 
-function originOf(i){
-  const r = Math.floor(i/3), c = i%3;
-  return `${(c+0.5)/3*100}% ${(r+0.5)/3*100}%`;
+function renderGrid(){
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  const depth = path.length;
+  for(let i=0;i<9;i++){
+    const p = path.concat(i);
+    const node = getNode(p);
+    const filled = !!(node && node.label);
+    const t = document.createElement('div');
+    t.className = 'tile ' + (filled ? 'filled' : 'empty');
+    if(filled) t.style.background = tileBg(i, depth);
+    t.innerHTML = `
+      <span class="code">${codeOf(i)}</span>
+      <span class="label">${filled ? escHtml(node.label) : '비어 있음'}</span>
+      ${hasDescendants(p) ? '<span class="dot" title="하위 항목 있음"></span>' : ''}
+      <button class="edit" data-i="${i}" aria-label="이름 입력" title="이름 입력">
+        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      </button>`;
+    t.addEventListener('click', (e)=>{
+      if(e.target.closest('.edit')) return;
+      if(!filled){ beginEdit(t, p, i, depth); return; }
+      zoomIn(i);
+    });
+    t.querySelector('.edit').addEventListener('click', (e)=>{
+      e.stopPropagation();
+      beginEdit(t, p, i, depth);
+    });
+    grid.appendChild(t);
+  }
 }
+
+function beginEdit(tileEl, p, i, depth){
+  const node = getNode(p);
+  const existing = node ? node.label : '';
+  tileEl.innerHTML = `<textarea maxlength="60" placeholder="이름 입력…">${escHtml(existing)}</textarea>`;
+  const ta = tileEl.querySelector('textarea');
+  ta.focus(); ta.select();
+  const finish = (commit)=>{
+    if(commit){
+      const val = ta.value.trim();
+      const key = nodeKey(p);
+      if(val){ current.nodes[key] = { label: val }; }
+      else { delete current.nodes[key]; }
+      queueSave();
+    }
+    renderGrid();
+  };
+  ta.addEventListener('keydown', e=>{
+    if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); finish(true); }
+    else if(e.key==='Escape'){ e.preventDefault(); finish(false); }
+  });
+  ta.addEventListener('blur', ()=>finish(true));
+}
+
+function originOf(i){ const r=Math.floor(i/3), c=i%3; return `${(c+0.5)/3*100}% ${(r+0.5)/3*100}%`; }
 
 function zoomIn(i){
   if(busy) return; busy = true;
+  const grid = document.getElementById('grid');
   grid.style.transformOrigin = originOf(i);
   grid.classList.add('anim');
   requestAnimationFrame(()=>{ grid.style.transform = 'scale(3)'; });
@@ -155,16 +432,19 @@ function zoomIn(i){
     path.push(i);
     grid.classList.remove('anim');
     grid.style.transform = 'none';
-    render();
+    renderCrumbs();
+    renderGrid();
     busy = false;
   }, {once:true});
 }
 
 function zoomOut(newLen){
   if(busy || newLen >= path.length) return; busy = true;
-  const leaving = path[newLen];          // 빠져나올 때 기준이 되는 상위 타일
+  const leaving = path[newLen];
   path = path.slice(0, newLen);
-  render();
+  renderCrumbs();
+  renderGrid();
+  const grid = document.getElementById('grid');
   grid.classList.remove('anim');
   grid.style.transformOrigin = originOf(leaving);
   grid.style.transform = 'scale(3)';
@@ -180,10 +460,36 @@ function zoomOut(newLen){
 }
 
 document.addEventListener('keydown', e=>{
-  if(e.key === 'Escape' && path.length) zoomOut(path.length-1);
+  if(view!=='board') return;
+  if(document.activeElement && document.activeElement.tagName==='TEXTAREA') return;
+  if(e.key==='Escape' && path.length) zoomOut(path.length-1);
 });
 
-render();
+/* ---------------- save ---------------- */
+function queueSave(){
+  const badge = document.getElementById('saveBadge');
+  if(badge) badge.classList.remove('show');
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async ()=>{
+    current.updatedAt = Date.now();
+    await setBoard(current.id, current);
+    const idxEntry = boardsIndex.find(b=>b.id===current.id);
+    const swatch = [0,1,2].map(i=>{
+      const n = current.nodes[String(i)];
+      return n && n.label ? colorPreview(i) : null;
+    });
+    if(idxEntry){ idxEntry.title = current.title; idxEntry.updatedAt = current.updatedAt; idxEntry.swatch = swatch; }
+    await setIndex(boardsIndex);
+    const b = document.getElementById('saveBadge');
+    if(b) b.classList.add('show');
+  }, 500);
+}
+function colorPreview(i){
+  const p = PALETTE[i];
+  return `hsl(${p.h} ${p.s}% ${p.l}%)`;
+}
+
+init();
 </script>
 </body>
 </html>
