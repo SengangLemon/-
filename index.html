@@ -173,24 +173,58 @@ button{font-family:inherit;}
 <script>
 const app = document.getElementById('app');
 
-/* ---------------- storage helpers ---------------- */
+/* ---------------- storage helpers ----------------
+   메모리 캐시가 항상 1순위. window.storage(클로드 아티팩트) →
+   localStorage(로컬 파일) 순으로 있는 환경에만 저장을 시도하고,
+   저장이 전부 실패해도 앱 동작(보드 열기/편집)은 막지 않는다. */
+const mem = {};            // key → raw string
+let boardsCache = {};      // id → board object
+
+function hasArtifactStorage(){
+  return typeof window.storage === 'object' && window.storage && typeof window.storage.get === 'function';
+}
+async function storeGet(key){
+  if(key in mem) return mem[key];
+  if(hasArtifactStorage()){
+    try{ const r = await window.storage.get(key, false); if(r && r.value != null){ mem[key]=r.value; return r.value; } }catch(e){}
+  }
+  try{ const v = localStorage.getItem('nonet:'+key); if(v !== null){ mem[key]=v; return v; } }catch(e){}
+  return null;
+}
+async function storeSet(key, val){
+  mem[key] = val;
+  let ok = false;
+  if(hasArtifactStorage()){
+    try{ const r = await window.storage.set(key, val, false); ok = !!r; }catch(e){}
+  }
+  try{ localStorage.setItem('nonet:'+key, val); ok = true; }catch(e){}
+  return ok;
+}
+async function storeDelete(key){
+  delete mem[key];
+  if(hasArtifactStorage()){ try{ await window.storage.delete(key, false); }catch(e){} }
+  try{ localStorage.removeItem('nonet:'+key); }catch(e){}
+}
+
 async function getIndex(){
-  try{ const r = await window.storage.get('boards-index', false); return r ? JSON.parse(r.value) : []; }
-  catch(e){ return []; }
+  const raw = await storeGet('boards-index');
+  if(raw){ try{ return JSON.parse(raw); }catch(e){} }
+  return [];
 }
-async function setIndex(list){
-  try{ await window.storage.set('boards-index', JSON.stringify(list), false); }catch(e){}
-}
+async function setIndex(list){ return storeSet('boards-index', JSON.stringify(list)); }
 async function getBoard(id){
-  try{ const r = await window.storage.get('board:'+id, false); return r ? JSON.parse(r.value) : null; }
-  catch(e){ return null; }
+  if(boardsCache[id]) return boardsCache[id];
+  const raw = await storeGet('board:'+id);
+  if(raw){ try{ boardsCache[id] = JSON.parse(raw); return boardsCache[id]; }catch(e){} }
+  return null;
 }
 async function setBoard(id, board){
-  try{ await window.storage.set('board:'+id, JSON.stringify(board), false); return true; }
-  catch(e){ return false; }
+  boardsCache[id] = board;
+  return storeSet('board:'+id, JSON.stringify(board));
 }
 async function deleteBoard(id){
-  try{ await window.storage.delete('board:'+id, false); }catch(e){}
+  delete boardsCache[id];
+  return storeDelete('board:'+id);
 }
 
 /* ---------------- palette ---------------- */
@@ -283,9 +317,10 @@ function renderHome(){
 async function createBoard(){
   const id = uid();
   const board = { id, title:'제목 없는 보드', nodes:{}, updatedAt:Date.now(), createdAt:Date.now() };
-  await setBoard(id, board);
+  boardsCache[id] = board;
   boardsIndex.push({ id, title:board.title, updatedAt:board.updatedAt, swatch:[] });
-  await setIndex(boardsIndex);
+  setBoard(id, board);      // 저장은 백그라운드 — 열기를 막지 않음
+  setIndex(boardsIndex);
   openBoard(id, true);
 }
 
@@ -299,7 +334,14 @@ async function removeBoard(id){
 
 async function openBoard(id, focusTitle){
   current = await getBoard(id);
-  if(!current){ renderHome(); return; }
+  if(!current){
+    // 목록에는 있는데 데이터를 못 찾는 경우 — 깨진 항목 정리
+    boardsIndex = boardsIndex.filter(b=>b.id!==id);
+    setIndex(boardsIndex);
+    alert('이 보드의 데이터를 찾을 수 없어 목록에서 제거했습니다.');
+    renderHome();
+    return;
+  }
   path = [];
   view = 'board';
   renderBoard();
@@ -487,7 +529,7 @@ function queueSave(){
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async ()=>{
     current.updatedAt = Date.now();
-    await setBoard(current.id, current);
+    const ok = await setBoard(current.id, current);
     const idxEntry = boardsIndex.find(b=>b.id===current.id);
     const swatch = [0,1,2].map(i=>{
       const n = current.nodes[String(i)];
@@ -495,8 +537,10 @@ function queueSave(){
     });
     if(idxEntry){ idxEntry.title = current.title; idxEntry.updatedAt = current.updatedAt; idxEntry.swatch = swatch; }
     await setIndex(boardsIndex);
-    const b = document.getElementById('saveBadge');
-    if(b) b.classList.add('show');
+    if(ok){
+      const b = document.getElementById('saveBadge');
+      if(b) b.classList.add('show');
+    }
   }, 500);
 }
 function colorPreview(i){
