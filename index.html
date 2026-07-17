@@ -385,7 +385,6 @@ function renderGrid(){
       </button>`;
     t.addEventListener('click', (e)=>{
       if(e.target.closest('.edit')) return;
-      if(!filled){ beginEdit(t, p, i, depth); return; }
       zoomIn(i);
     });
     t.querySelector('.edit').addEventListener('click', (e)=>{
@@ -427,15 +426,23 @@ function zoomIn(i){
   grid.style.transformOrigin = originOf(i);
   grid.classList.add('anim');
   requestAnimationFrame(()=>{ grid.style.transform = 'scale(3)'; });
-  grid.addEventListener('transitionend', function done(){
-    grid.removeEventListener('transitionend', done);
+  let finished = false;
+  function finish(){
+    if(finished) return; finished = true;
+    grid.removeEventListener('transitionend', onEnd);
+    clearTimeout(timer);
     path.push(i);
     grid.classList.remove('anim');
     grid.style.transform = 'none';
     renderCrumbs();
     renderGrid();
     busy = false;
-  }, {once:true});
+  }
+  function onEnd(e){
+    if(e.target === grid && e.propertyName === 'transform') finish();
+  }
+  grid.addEventListener('transitionend', onEnd);
+  const timer = setTimeout(finish, 650);
 }
 
 function zoomOut(newLen){
@@ -452,11 +459,19 @@ function zoomOut(newLen){
     grid.classList.add('anim');
     requestAnimationFrame(()=>{ grid.style.transform = 'none'; });
   });
-  grid.addEventListener('transitionend', function done(){
-    grid.removeEventListener('transitionend', done);
+  let finished = false;
+  function finish(){
+    if(finished) return; finished = true;
+    grid.removeEventListener('transitionend', onEnd);
+    clearTimeout(timer);
     grid.classList.remove('anim');
     busy = false;
-  }, {once:true});
+  }
+  function onEnd(e){
+    if(e.target === grid && e.propertyName === 'transform') finish();
+  }
+  grid.addEventListener('transitionend', onEnd);
+  const timer = setTimeout(finish, 650);
 }
 
 document.addEventListener('keydown', e=>{
