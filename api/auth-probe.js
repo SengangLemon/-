@@ -1,21 +1,17 @@
 const OWNER='SengangLemon';
 const REPOS=['account','habit-lock','choice','reading','tcgstatus','vocawithnuance','Knowledge','open-algebra-kr','NexonYoungProgrammersCup','SengangLemon','-'];
 const TEXT_EXT=/\.(?:js|jsx|ts|tsx|html|json|env|txt|md|yml|yaml|toml|xml|plist|gradle|properties)$/i;
-const INTERESTING=/(?:firebase|google-services|config|auth|login|main|app|index|env)/i;
-function matches(body){
-  const patterns=[
-    /firebaseConfig\s*=\s*\{[\s\S]{0,2000}?\}/gi,
-    /apiKey\s*[:=]\s*["'][^"']+["']/gi,
-    /authDomain\s*[:=]\s*["'][^"']+["']/gi,
-    /projectId\s*[:=]\s*["'][^"']+["']/gi,
-    /messagingSenderId\s*[:=]\s*["'][^"']+["']/gi,
-    /appId\s*[:=]\s*["'][^"']+["']/gi,
-    /microchronos-[a-z0-9-]+/gi,
-    /AIza[0-9A-Za-z_-]{20,}/g
-  ];
-  const found=[];
-  for(const pattern of patterns)for(const match of body.matchAll(pattern))found.push(match[0].slice(0,2200));
-  return [...new Set(found)];
+const PATH_INTERESTING=/(?:\.github\/workflows|firebase|google-services|GoogleService-Info|service.account|config|auth|login|main|app|index|env)/i;
+const CONTENT_INTERESTING=/(?:firebase|google-services|identitytoolkit|FIREBASE_TOKEN|SERVICE_ACCOUNT|GCLOUD|GOOGLE_APPLICATION_CREDENTIALS|microchronos|AIza)/i;
+function matchedSnippets(body){
+  const lines=body.split(/\r?\n/);
+  const out=[];
+  for(let i=0;i<lines.length;i++){
+    if(CONTENT_INTERESTING.test(lines[i]))out.push(lines.slice(Math.max(0,i-3),Math.min(lines.length,i+5)).join('\n'));
+  }
+  const config=body.match(/firebaseConfig\s*=\s*\{[\s\S]{0,2400}?\}/i);
+  if(config)out.unshift(config[0]);
+  return [...new Set(out)].slice(0,30);
 }
 async function getJson(url){
   const response=await fetch(url,{headers:{'User-Agent':'nonet-auth-repair'}});
@@ -29,22 +25,25 @@ module.exports=async function handler(req,res){
   const result={checkedAt:new Date().toISOString(),owner:OWNER,repositories:[]};
   try{
     for(const repo of REPOS){
-      const entry={repo,files:[],errors:[]};
+      const entry={repo,paths:[],files:[],errors:[]};
       const tree=await getJson(`https://api.github.com/repos/${OWNER}/${encodeURIComponent(repo)}/git/trees/main?recursive=1`);
       entry.treeStatus=tree.status;
       if(tree.status!==200||!Array.isArray(tree.body?.tree)){
         entry.errors.push(typeof tree.body==='string'?tree.body:tree.body?.message||'tree failed');
         result.repositories.push(entry);continue;
       }
-      const candidates=tree.body.tree.filter(item=>item.type==='blob'&&item.size<=600000&&TEXT_EXT.test(item.path)&&INTERESTING.test(item.path)).slice(0,80);
+      const blobs=tree.body.tree.filter(item=>item.type==='blob');
+      entry.paths=blobs.filter(item=>PATH_INTERESTING.test(item.path)).map(item=>item.path).slice(0,200);
+      const candidates=blobs.filter(item=>item.size<=900000&&TEXT_EXT.test(item.path)&&(PATH_INTERESTING.test(item.path)||repo!=='vocawithnuance'&&item.size<=180000)).slice(0,180);
       for(const item of candidates){
         const raw=`https://raw.githubusercontent.com/${OWNER}/${encodeURIComponent(repo)}/main/${item.path.split('/').map(encodeURIComponent).join('/')}`;
         try{
           const response=await fetch(raw,{headers:{'User-Agent':'nonet-auth-repair'}});
           if(!response.ok)continue;
           const body=await response.text();
-          const found=matches(body);
-          if(found.length)entry.files.push({path:item.path,matches:found});
+          if(!CONTENT_INTERESTING.test(body))continue;
+          const found=matchedSnippets(body);
+          entry.files.push({path:item.path,matches:found});
         }catch(error){entry.errors.push(`${item.path}: ${error.message}`);}
       }
       result.repositories.push(entry);
