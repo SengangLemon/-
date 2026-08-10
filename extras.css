@@ -1,0 +1,72 @@
+/* ---------- v3: chapter spine as the actual Nonet center axis ---------- */
+.chapter-spine{
+  display:flex;align-items:center;justify-content:center;overflow-x:auto;
+  margin:0 0 14px;padding:7px 5px;scrollbar-width:none;
+}
+.chapter-spine::-webkit-scrollbar{display:none}
+.chapter-spine i{
+  width:clamp(18px,4vw,42px);height:2px;flex:none;background:var(--line);position:relative;
+}
+.chapter-spine i::after{
+  content:"";position:absolute;right:-1px;top:-3px;border-left:6px solid var(--line);
+  border-top:4px solid transparent;border-bottom:4px solid transparent;
+}
+.spine-step{
+  width:35px;height:35px;flex:none;border-radius:50%;border:1px solid var(--line);
+  background:var(--paper-raised);display:grid;place-items:center;transition:.16s;
+}
+.spine-step span{font:600 9px/1 'JetBrains Mono',monospace;color:var(--ink-faint)}
+.spine-step:hover{border-color:var(--accent);transform:translateY(-1px)}
+.spine-step.active{
+  background:var(--accent);border-color:var(--accent);box-shadow:0 0 0 5px var(--accent-soft);
+}
+.spine-step.active span{color:#fff}
+button.tile.center{cursor:pointer}
+button.tile.center:hover{
+  transform:translateY(-2px);box-shadow:0 10px 22px rgba(33,29,23,.16);
+  border-color:var(--type-color)
+}
+.center-action{
+  margin-top:9px;border-radius:999px;padding:5px 8px;
+  font:600 8px/1 'JetBrains Mono',monospace;color:var(--type-color);
+  background:color-mix(in srgb,var(--type-soft) 78%,#fff);max-width:92%;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.spine-hub::after{
+  content:"";position:absolute;left:50%;bottom:-8px;width:2px;height:8px;
+  transform:translateX(-50%);background:var(--type-color);opacity:.38;
+}
+@keyframes route-in{from{opacity:.35;transform:scale(.992)}to{opacity:1;transform:none}}
+::view-transition-old(root){animation:120ms ease both fade-out}
+::view-transition-new(root){animation:220ms ease both route-in}
+@keyframes fade-out{to{opacity:0;transform:scale(1.008)}}
+
+@media(max-width:440px){
+  .chapter-spine{justify-content:flex-start;margin-bottom:10px;padding:7px 2px 7px 5px}
+  .chapter-spine i{width:18px}
+  .spine-step{width:31px;height:31px}
+  .center-action{font-size:7px;padding:4px 5px;margin-top:6px}
+}
+
+/* ---------- personal workspace / original Nonet upgraded ---------- */
+.personal-section{margin-top:34px}
+.personal-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.personal-card{position:relative;text-align:left;border:1px solid var(--line);background:var(--paper-raised);border-radius:var(--radius-xl);padding:20px;min-height:172px;box-shadow:var(--shadow-card);cursor:pointer;transition:.16s;overflow:hidden}
+.personal-card:hover{transform:translateY(-2px);border-color:var(--ink-faint)}
+.personal-card::before{content:"";position:absolute;inset:0 auto 0 0;width:5px;background:var(--accent)}
+.personal-card h3{font:600 21px/1.2 'Fraunces',serif;margin:5px 0 8px}
+.personal-card p{font-size:12px;line-height:1.55;color:var(--ink-soft)}
+.personal-card .personal-meta{margin-top:15px;display:flex;gap:7px;flex-wrap:wrap}
+.personal-card .delete-personal{position:absolute;right:12px;top:12px;width:30px;height:30px;border:1px solid transparent;border-radius:50%;background:transparent;color:var(--ink-faint);cursor:pointer;z-index:3}
+.personal-card .delete-personal:hover{background:var(--danger-soft);color:var(--danger)}
+.personal-new-row{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}
+.personal-editor{display:grid;gap:11px}
+.personal-editor label{display:grid;gap:5px;font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--ink-faint);text-transform:uppercase}
+.personal-editor input,.personal-editor textarea{width:100%;border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px 11px;color:var(--ink);outline:none;font-size:13px}
+.personal-editor textarea{min-height:110px;resize:vertical;line-height:1.55}
+.personal-editor input:focus,.personal-editor textarea:focus{border-color:var(--accent)}
+.personal-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px}
+.tile.personal-empty{border-style:dashed;background:rgba(255,255,255,.34);color:var(--ink-faint)}
+.tile.personal-empty h3{font-family:'Inter',sans-serif;font-size:12px}
+.personal-root-note{font-size:11px;line-height:1.55;color:var(--ink-faint);margin-top:12px}
+@media(max-width:760px){.personal-grid{grid-template-columns:1fr}}
