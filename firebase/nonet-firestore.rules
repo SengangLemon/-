@@ -1,0 +1,13 @@
+// Merge this match block into the existing Firestore rules for microchronos-3dd02.
+// Nonet stores private sync data only in users/{uid}.nonet.
+// Existing MicroChronos fields in the same user document are preserved with setDoc(..., {merge:true}).
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId} {
+      allow read, create, update, delete:
+        if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
