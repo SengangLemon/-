@@ -1,27 +1,51 @@
-# Nonet — 9ⁿ 결정 그리드
+# Nonet Hub — 9ⁿ
 
-3×3 타일을 누르면 그 안에서 다시 9개로 갈라지는 무한 줌인 결정 그리드.
-정적 사이트(파일 1개). 빌드 불필요.
+중앙 허브 1개와 주변 가지 최대 8개를 재귀적으로 연결하는 범용 분류·학습·결정 앱입니다.
+
+현재 기본 제공 보드:
+
+- 선형대수학 개념 트리
+- 현대대수학 개념 트리
+- 서울 점심 메뉴 결정판
+- 서울 저녁 메뉴 결정판
+- 서울 디저트 결정판
+- 사용자 제작 허브 보드
+
+## 메뉴 데이터는 앱에 포함됩니다
+
+점심·저녁·디저트 데이터는 외부 API에서 받아오지 않습니다. 저장소의 정적 JavaScript 파일에 하드코딩되어 `index.html`과 함께 배포됩니다.
+
+따라서 다음 방식에서도 같은 데이터가 앱 패키지에 포함됩니다.
+
+- Vercel 정적 웹 배포
+- PWA
+- Capacitor 또는 WebView 기반 모바일 패키징
+- 정적 파일을 포함하는 데스크톱 앱
+
+활성 데이터 버전은 `data/menus/active.js`에서 관리합니다. 자세한 연간 업데이트 절차는 `data/menus/README.md`를 참고하세요.
+
+## 연간 업데이트 원칙
+
+- 이전 연도 릴리스는 수정하지 않습니다.
+- 새 연도 데이터를 별도 등록합니다.
+- `data/menus/active.js`의 연도만 바꿔 새 내장 결정판을 활성화합니다.
+- 사용자가 복제한 개인 보드는 스냅샷으로 보존하여 자동으로 덮어쓰지 않습니다.
 
 ## Vercel 배포
 
-### 방법 1 — 드래그&드롭 (가장 쉬움)
-1. https://vercel.com 로그인
-2. Add New → Project → 이 폴더를 통째로 드래그&드롭
-   (또는 Deploy 화면에 폴더 업로드)
-3. Framework Preset: **Other** (또는 자동감지), 빌드 설정 비움 → Deploy
+이 저장소는 정적 사이트입니다.
 
-### 방법 2 — CLI
+1. Vercel에서 GitHub 저장소 `SengangLemon/-`를 연결합니다.
+2. Framework Preset은 `Other`로 둡니다.
+3. Build Command와 Output Directory는 비워둡니다.
+4. `main` 브랜치에 push하면 자동 배포됩니다.
+
+## 로컬 실행
+
+브라우저의 파일 제한을 피하려면 간단한 정적 서버로 실행하는 것을 권장합니다.
+
 ```bash
-npm i -g vercel
-cd nonet-deploy
-vercel          # 미리보기 배포
-vercel --prod   # 운영 배포
+python3 -m http.server 8000
 ```
 
-### 방법 3 — GitHub 연동
-1. 이 폴더를 깃 저장소로 push
-2. Vercel에서 Import Git Repository → 선택 → Deploy
-
-## 로컬 확인
-그냥 index.html 더블클릭하면 열림. (서버 불필요)
+그다음 브라우저에서 `http://localhost:8000`을 엽니다.
