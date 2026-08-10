@@ -1,35 +1,53 @@
-async function text(response){return await response.text();}
-function absolute(base,ref){try{return new URL(ref,base).href;}catch{return null;}}
-function snippets(source){
-  const patterns=[/firebaseConfig\s*=\s*\{[\s\S]{0,1200}?\}/gi,/apiKey\s*[:=]\s*["'][^"']+["']/gi,/projectId\s*[:=]\s*["'][^"']+["']/gi,/microchronos-[a-z0-9-]+/gi,/AIza[0-9A-Za-z_-]{20,}/g];
-  const out=[];
-  for(const p of patterns)for(const match of source.matchAll(p))out.push(match[0].slice(0,1500));
-  return [...new Set(out)];
+const OWNER='SengangLemon';
+const REPOS=['account','habit-lock','choice','reading','tcgstatus','vocawithnuance','Knowledge','open-algebra-kr','NexonYoungProgrammersCup','SengangLemon','-'];
+const TEXT_EXT=/\.(?:js|jsx|ts|tsx|html|json|env|txt|md|yml|yaml|toml|xml|plist|gradle|properties)$/i;
+const INTERESTING=/(?:firebase|google-services|config|auth|login|main|app|index|env)/i;
+function matches(body){
+  const patterns=[
+    /firebaseConfig\s*=\s*\{[\s\S]{0,2000}?\}/gi,
+    /apiKey\s*[:=]\s*["'][^"']+["']/gi,
+    /authDomain\s*[:=]\s*["'][^"']+["']/gi,
+    /projectId\s*[:=]\s*["'][^"']+["']/gi,
+    /messagingSenderId\s*[:=]\s*["'][^"']+["']/gi,
+    /appId\s*[:=]\s*["'][^"']+["']/gi,
+    /microchronos-[a-z0-9-]+/gi,
+    /AIza[0-9A-Za-z_-]{20,}/g
+  ];
+  const found=[];
+  for(const pattern of patterns)for(const match of body.matchAll(pattern))found.push(match[0].slice(0,2200));
+  return [...new Set(found)];
+}
+async function getJson(url){
+  const response=await fetch(url,{headers:{'User-Agent':'nonet-auth-repair'}});
+  const text=await response.text();
+  let body;try{body=JSON.parse(text);}catch{body=text;}
+  return{status:response.status,body};
 }
 module.exports=async function handler(req,res){
   res.setHeader('Cache-Control','no-store');
   res.setHeader('Content-Type','application/json; charset=utf-8');
-  const roots=['https://legendary-paletas-866e41.netlify.app/'];
-  const result={checkedAt:new Date().toISOString(),pages:[]};
+  const result={checkedAt:new Date().toISOString(),owner:OWNER,repositories:[]};
   try{
-    for(const root of roots){
-      const page={url:root,assets:[],matches:[]};
-      const response=await fetch(root,{redirect:'follow'});
-      page.status=response.status;
-      const html=await text(response);
-      page.matches.push(...snippets(html));
-      const refs=[...html.matchAll(/<(?:script|link)[^>]+(?:src|href)=["']([^"']+)["']/gi)].map(m=>m[1]);
-      for(const ref of refs.slice(0,80)){
-        const url=absolute(root,ref);
-        if(!url||!/^https?:/.test(url))continue;
-        try{
-          const assetResponse=await fetch(url,{redirect:'follow'});
-          const body=await text(assetResponse);
-          const found=snippets(body);
-          if(found.length)page.assets.push({url,status:assetResponse.status,matches:found});
-        }catch(error){page.assets.push({url,error:error.message});}
+    for(const repo of REPOS){
+      const entry={repo,files:[],errors:[]};
+      const tree=await getJson(`https://api.github.com/repos/${OWNER}/${encodeURIComponent(repo)}/git/trees/main?recursive=1`);
+      entry.treeStatus=tree.status;
+      if(tree.status!==200||!Array.isArray(tree.body?.tree)){
+        entry.errors.push(typeof tree.body==='string'?tree.body:tree.body?.message||'tree failed');
+        result.repositories.push(entry);continue;
       }
-      result.pages.push(page);
+      const candidates=tree.body.tree.filter(item=>item.type==='blob'&&item.size<=600000&&TEXT_EXT.test(item.path)&&INTERESTING.test(item.path)).slice(0,80);
+      for(const item of candidates){
+        const raw=`https://raw.githubusercontent.com/${OWNER}/${encodeURIComponent(repo)}/main/${item.path.split('/').map(encodeURIComponent).join('/')}`;
+        try{
+          const response=await fetch(raw,{headers:{'User-Agent':'nonet-auth-repair'}});
+          if(!response.ok)continue;
+          const body=await response.text();
+          const found=matches(body);
+          if(found.length)entry.files.push({path:item.path,matches:found});
+        }catch(error){entry.errors.push(`${item.path}: ${error.message}`);}
+      }
+      result.repositories.push(entry);
     }
     res.status(200).end(JSON.stringify(result,null,2));
   }catch(error){res.status(500).end(JSON.stringify({error:error.message},null,2));}
